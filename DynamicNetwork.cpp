@@ -42,6 +42,27 @@ class Node{
         return nullptr;
     }
 
+    Node* getDiscordantNeighbour(){
+        std::vector<Node*> roster;
+        for(Node* node: neighbours){
+            if(node->getState()!=this->state)
+                roster.push_back(node);
+        }
+        if(roster.size()==0)
+            return nullptr;
+
+        return roster[this->getRandomNumber(roster.size()-1)];
+    }
+
+    int getDiscordantEdgeCount(){
+        int count=0;
+        for(Node* node: neighbours){
+            if(node->getState()!=this->state)
+                count++;
+        }
+        return count;
+    }
+
     void addNeighbour(Node* newNeighbour){
         for(Node* node: neighbours){
             if(node->getId() == newNeighbour->getId()){
@@ -62,11 +83,25 @@ class Node{
     }
 
     void printAllNeighbours(){
-        cout<<this->getId()<<" ("<<this->getState()<<")-> ";
+        cout<<this->id<<" ("<<this->state<<")-> ";
         for(Node* node: neighbours){
             cout<<node->getId()<<" ";
         }
         cout<<endl;
+    }
+
+    bool hasDiscordantEdge(){
+        for(Node* node: neighbours)
+            if(node->getState()!=this->state)
+                return true;
+        return false;
+    }
+
+    int getRandomNumber(int limit){
+        std::random_device dev;
+        std::mt19937 rng(dev());
+        std::uniform_int_distribution<int> dist(0, limit); 
+        return dist(rng);
     }
     
 };
@@ -164,6 +199,56 @@ class DynamicNetwork{
         cout<<"Nodes Generated"<<endl;
     }
 
+    void beginSimulation(){
+        long discEdge=this->getActiveDiscordantEdgeCount();
+        bool altEdgeSelectionAlgo=false;
+        cout<<getSummary(-1, discEdge)<<endl;
+        ofstream outputFile;
+        outputFile.open(this->outputFileName);
+        outputFile<<"Epoch Pop Frac DiscEdge"<<endl;
+        for(int epoch=0; epoch<this->epochLimit; epoch++){
+            for(int step=0; step<this->stepCount; step++){
+                bool areWeDone=false;
+                if(!altEdgeSelectionAlgo)
+                    altEdgeSelectionAlgo=interact();
+                else
+                    areWeDone=interactAlt();
+                if(areWeDone){
+                    discEdge=this->getActiveDiscordantEdgeCount();
+                    std::string summary=getSummary(epoch, discEdge);
+                    cout<<summary<<endl;
+                    outputFile << summary <<endl;
+                    this->recountStates();
+                    cout<<"Simulation Completed!"<<endl;
+                    outputFile.close();
+                    return;
+                }
+            }
+            if(epoch%10==0){
+                cout<<"Epoch No. "<<epoch<<endl;
+            }
+            discEdge=this->getActiveDiscordantEdgeCount();
+            if(discEdge==0){
+                std::string summary=getSummary(epoch, discEdge);
+                cout<<summary<<endl;
+                outputFile << summary <<endl;
+                this->recountStates();
+                cout<<"Simulation Completed!"<<endl;
+                outputFile.close();
+                return;
+            }
+            std::string summary=getSummary(epoch, discEdge);
+            cout<<summary<<endl;
+            outputFile << summary <<endl;
+
+            if(discEdge<100 && !altEdgeSelectionAlgo){
+                altEdgeSelectionAlgo=true;
+                cout<<"Switching Algorithms"<<endl;
+            }
+        }
+        outputFile.close();
+    }
+
     void convince(Node* inputNode, Node* outputNode){
         outputNode->setState(inputNode);
         if(outputNode->getState()){
@@ -176,12 +261,24 @@ class DynamicNetwork{
         }
     }
 
+    void rewire(Node* node, Node* oldNeighbour, Node* newNeighbour){
+        node->deleteNeighbour(oldNeighbour);
+        oldNeighbour->deleteNeighbour(node);
+
+        node->addNeighbour(newNeighbour);
+        newNeighbour->addNeighbour(node);
+    }
+
     Node* getNode(int identity){
         if(identity<0 || identity>=this->nodeCount)
             cout<<"Node with id = "<<identity<<" not found"<<endl;
         else
             return nodeList[identity];
         return nullptr;
+    }
+
+    int getDiscordantEdgeCount(){
+        int 
     }
 
 
@@ -240,9 +337,8 @@ int main(){
     network->printAllNodes();
     Node* n1=network->getNode(0);
     Node* n2=network->getNode(1);
-    Node* n3=network->getNode(2);
-    network->convince(n1, n2);
-    network->convince(n1, n3);
+    Node* n3=network->getNode(5);
+    network->rewire(n1, n2, n3);
     cout<<endl;
     network->printAllNodes();
     return 0;
