@@ -21,11 +21,15 @@ class Node{
         this->state = status;
     }
 
+    void setState(Node* node){
+        this->state=node->getState();
+    }
+
     int getId(){
         return this->id;
     }
 
-    bool getStatus(){
+    bool getState(){
         return this->state;
     }
 
@@ -58,12 +62,13 @@ class Node{
     }
 
     void printAllNeighbours(){
-        cout<<this->getId()<<" ("<<this->getStatus()<<")-> ";
+        cout<<this->getId()<<" ("<<this->getState()<<")-> ";
         for(Node* node: neighbours){
             cout<<node->getId()<<" ";
         }
         cout<<endl;
     }
+    
 };
 
 class DynamicNetwork{
@@ -107,7 +112,6 @@ class DynamicNetwork{
         rewiringProbability=rewire; 
         relativeSize=0.5;
         complexContagion=contagion;
-        cout<<"Input file name is "<<this->inputFileName<<endl;
     }
 
     void loadData(){
@@ -121,7 +125,6 @@ class DynamicNetwork{
             int inputNode, outputNode;
             is>>inputNode;
             is>>outputNode;
-            cout<<inputNode<<" "<<outputNode<<endl;
             if(cc==0){
                 cout<<"Start Node Generation"<<endl;
                 generateNetwork(inputNode, outputNode);
@@ -159,6 +162,18 @@ class DynamicNetwork{
             this->nodeList.push_back(newNode);
         }
         cout<<"Nodes Generated"<<endl;
+    }
+
+    void convince(Node* inputNode, Node* outputNode){
+        outputNode->setState(inputNode);
+        if(outputNode->getState()){
+            this->stat1++;
+            this->stat0--;
+        }
+        else{
+            this->stat0++;
+            this->stat1--;
+        }
     }
 
     Node* getNode(int identity){
@@ -222,6 +237,13 @@ class DynamicNetwork{
 int main(){
     DynamicNetwork* network=new DynamicNetwork("RealWorld/trial data", 0.5, false, 0.5);
     network->loadData();
+    network->printAllNodes();
+    Node* n1=network->getNode(0);
+    Node* n2=network->getNode(1);
+    Node* n3=network->getNode(2);
+    network->convince(n1, n2);
+    network->convince(n1, n3);
+    cout<<endl;
     network->printAllNodes();
     return 0;
 }
