@@ -25,12 +25,20 @@ class Node{
         this->state=node->getState();
     }
 
+    void setState(bool status){
+        this->state=status;
+    }
+
     int getId(){
         return this->id;
     }
 
     bool getState(){
         return this->state;
+    }
+
+    const std::vector<Node*>& getNeighbours() const {
+        return neighbours;
     }
 
     Node* getNeighbour(int id){
@@ -80,6 +88,14 @@ class Node{
                 break;
             }
         }
+    }
+
+    bool isNeighbour(Node* node){
+        for(Node* n: neighbours){
+            if(node->getId() == n->getId())
+                return true;
+        }
+        return false;
     }
 
     void printAllNeighbours(){
@@ -200,7 +216,7 @@ class DynamicNetwork{
     }
 
     void beginSimulation(){
-        long discEdge=this->getActiveDiscordantEdgeCount();
+        long discEdge=this->getDiscordantEdgeCount();
         bool altEdgeSelectionAlgo=false;
         cout<<getSummary(-1, discEdge)<<endl;
         ofstream outputFile;
@@ -214,7 +230,7 @@ class DynamicNetwork{
                 else
                     areWeDone=interactAlt();
                 if(areWeDone){
-                    discEdge=this->getActiveDiscordantEdgeCount();
+                    discEdge=this->getDiscordantEdgeCount();
                     std::string summary=getSummary(epoch, discEdge);
                     cout<<summary<<endl;
                     outputFile << summary <<endl;
@@ -227,7 +243,7 @@ class DynamicNetwork{
             if(epoch%10==0){
                 cout<<"Epoch No. "<<epoch<<endl;
             }
-            discEdge=this->getActiveDiscordantEdgeCount();
+            discEdge=this->getDiscordantEdgeCount();
             if(discEdge==0){
                 std::string summary=getSummary(epoch, discEdge);
                 cout<<summary<<endl;
@@ -249,6 +265,70 @@ class DynamicNetwork{
         outputFile.close();
     }
 
+    bool interact(){
+        bool ideal=false;
+        double rando=this->getRandomNumber();
+        Node* node;
+        int tries=0;
+        do{
+            node=this->getRandomNode();
+            if(node->hasDiscordantEdge())
+                ideal=true;
+            tries++;
+        }while(!ideal && tries<10000);
+        
+        if(tries>=1000){
+            cout<<"Tries is greater with a value of "<<tries<<endl;
+            return true;
+        }
+
+        if(rando<=rewiringProbability){
+            Node* neighbour=node->getDiscordantNeighbour();
+            Node* newNeighbour=this->getNewNeighbour(node);
+            this->rewire(node, neighbour, newNeighbour);
+        }
+        else{ 
+            if(!this->complexContagion){
+                Node* neighbour=node->getDiscordantNeighbour();
+                this->convince(node, neighbour);
+            }
+            else
+                this->convinceComplexContagion(node);
+        }
+        return false;
+    }
+
+    bool interactAlt(){
+        std::vector<Node*> roster;
+        double rando=this->getRandomNumber();
+        for(Node* node: nodeList){
+            if(node->getDiscordantNeighbour())
+                roster.push_back(node);
+        }
+        if(roster.size()<=1 || this->getDiscordantEdgeCount()<=1){
+            this->recountStates();
+            return true;
+        }
+        int rand=this->getRandomNumber(roster.size()-1);
+        //cout<<"random "<<rand<<" "<<edges.size()<<endl;
+        Node* node1=roster[rand];
+        if(rando<=rewiringProbability){
+            Node* node2=node1->getDiscordantNeighbour();
+            Node* newNeighbour=this->getNewNeighbour(node1);
+            this->rewire(node1, node2, newNeighbour);
+        }
+        else{ 
+            if(!this->complexContagion){
+                Node* node2=node1->getDiscordantNeighbour();
+                this->convince(node1, node2);
+            }
+            else
+                this->convinceComplexContagion(node1);
+        }
+
+        return false;
+    }
+
     void convince(Node* inputNode, Node* outputNode){
         outputNode->setState(inputNode);
         if(outputNode->getState()){
@@ -256,6 +336,28 @@ class DynamicNetwork{
             this->stat0--;
         }
         else{
+            this->stat0++;
+            this->stat1--;
+        }
+    }
+
+    void convinceComplexContagion(Node* node){
+        int op0=0, op1=0;
+        for(Node* neighbour: node->getNeighbours()){
+            if(neighbour->getState())
+                op1++;
+            else
+                op0++;
+        }
+        double switchToTrue=op1/(op1+op0);
+        double rando=this->getRandomNumber();
+        if(rando<=switchToTrue){
+            node->setState(true);
+            this->stat1++;
+            this->stat0--;
+        }
+        else{
+            node->setState(false);
             this->stat0++;
             this->stat1--;
         }
@@ -277,10 +379,43 @@ class DynamicNetwork{
         return nullptr;
     }
 
-    int getDiscordantEdgeCount(){
-        int 
+    Node* getNewNeighbour(Node* node){
+        bool ideal=false;
+        int count=10000;
+        Node* newNode;
+        do{
+            newNode=this->getRandomNode();
+            if(!node->isNeighbour(newNode))
+                return newNode;
+        }while(!ideal);
     }
 
+    int getDiscordantEdgeCount(){
+        int count=0;
+        for(Node* node: nodeList)
+            count+=node->getDiscordantEdgeCount();
+        
+        return count;
+    }
+
+
+    void recountStates(){
+        int s1=0, s2=0;
+        for(Node* node: nodeList){
+            if(node->getState()==0)
+                s1++;
+            else
+                s2++;
+        }
+        if(s1!=this->stat0 || s2!=this->stat1)
+            cout<<"Counting Mismatch"<<endl;
+    }
+
+    std::string getSummary(int epoch, long discEdge){
+        std::ostringstream oss;
+        oss<<(epoch+1)<<" "<<stat0<<" "<<(stat0/(stat1*1.0+stat0*1.0))<<" "<<discEdge;
+        return oss.str();
+    }
 
     int getRandomNumber(int limit){
         std::random_device dev;
