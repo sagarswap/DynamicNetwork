@@ -184,10 +184,13 @@ class DynamicNetwork{
             else{
                 if(inputNode==outputNode)
                     continue; //prevents edges into self
-                Node* node1=getNode(inputNode);
-                Node* node2=getNode(outputNode);
-                node1->addNeighbour(node2);
-                node2->addNeighbour(node1);
+                double ran=this->getRandomNumber();
+                if(ran<0.9){
+                    Node* node1=getNode(inputNode);
+                    Node* node2=getNode(outputNode);
+                    node1->addNeighbour(node2);
+                    node2->addNeighbour(node1);
+                }
             }        
         }
         cout<<"Data Loaded"<<endl;
@@ -275,7 +278,7 @@ class DynamicNetwork{
             if(node->hasDiscordantEdge())
                 ideal=true;
             tries++;
-        }while(!ideal && tries<10000);
+        }while(!ideal && tries<1000);
         
         if(tries>=1000){
             cout<<"Tries is greater with a value of "<<tries<<endl;
@@ -284,7 +287,9 @@ class DynamicNetwork{
 
         if(rando<=rewiringProbability){
             Node* neighbour=node->getDiscordantNeighbour();
-            Node* newNeighbour=this->getNewNeighbour(node);
+            Node* newNeighbour=this->getNewSimilarNeighbour(node);
+            if(newNeighbour==nullptr)
+                return false;
             this->rewire(node, neighbour, newNeighbour);
         }
         else{ 
@@ -314,7 +319,9 @@ class DynamicNetwork{
         Node* node1=roster[rand];
         if(rando<=rewiringProbability){
             Node* node2=node1->getDiscordantNeighbour();
-            Node* newNeighbour=this->getNewNeighbour(node1);
+            Node* newNeighbour=this->getNewSimilarNeighbour(node1);
+            if(newNeighbour==nullptr)
+                return false;
             this->rewire(node1, node2, newNeighbour);
         }
         else{ 
@@ -351,12 +358,12 @@ class DynamicNetwork{
         }
         double switchToTrue=op1/(op1+op0);
         double rando=this->getRandomNumber();
-        if(rando<=switchToTrue){
+        if(rando<=switchToTrue && !node->getState()){
             node->setState(true);
             this->stat1++;
             this->stat0--;
         }
-        else{
+        else if(rando>switchToTrue && node->getState()){
             node->setState(false);
             this->stat0++;
             this->stat1--;
@@ -379,15 +386,16 @@ class DynamicNetwork{
         return nullptr;
     }
 
-    Node* getNewNeighbour(Node* node){
-        bool ideal=false;
+    Node* getNewSimilarNeighbour(Node* node){
         int count=10000;
         Node* newNode;
         do{
             newNode=this->getRandomNode();
-            if(!node->isNeighbour(newNode))
+            if(!node->isNeighbour(newNode) && newNode->getState()==node->getState() && node->getId()!=newNode->getId())
                 return newNode;
-        }while(!ideal);
+            count--;
+        }while(count>0);
+        return nullptr;
     }
 
     int getDiscordantEdgeCount(){
@@ -467,14 +475,28 @@ class DynamicNetwork{
 };
 
 int main(){
-    DynamicNetwork* network=new DynamicNetwork("RealWorld/trial data", 0.5, false, 0.5);
-    network->loadData();
-    network->printAllNodes();
-    Node* n1=network->getNode(0);
-    Node* n2=network->getNode(1);
-    Node* n3=network->getNode(5);
-    network->rewire(n1, n2, n3);
-    cout<<endl;
-    network->printAllNodes();
+    double rewiring[]={0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
+    double start[]={0.1, 0.2, 0.3, 0.4, 0.5, 0.1, 0.2, 0.3, 0.4, 0.5};
+    bool contagi[]={false, true};
+    int l1=sizeof(rewiring)/sizeof(rewiring[0]);
+    int l2=sizeof(start)/sizeof(start[0]);
+    int l3=sizeof(contagi)/sizeof(contagi[0]);
+    
+    int execution=0;
+    for(bool c: contagi){
+        for(double  r : rewiring){
+            for(double st: start){
+                DynamicNetwork* network=new DynamicNetwork("RealWorld/facebook", 0.5, true, 0.5);
+                network->loadData();
+                network->beginSimulation();
+                execution++;
+                //network->printAllEdges();
+                //network->checkDegreeDistribution();
+                cout<<"Completed for r="<<r<<" Execution = "<<execution<<"/"<<l1*l2*l3<<endl;
+                //network->printAllEdges(500);
+                delete network;
+            }
+        }
+    }
     return 0;
 }

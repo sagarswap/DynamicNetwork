@@ -877,6 +877,7 @@ int main(){
     bool contagi[]={false, true};
     int l1=sizeof(rewiring)/sizeof(rewiring[0]);
     int l2=sizeof(start)/sizeof(start[0]);
+    int l3=sizeof(contagi)/sizeof(contagi[0]);
     string network[]={"WattsStrogatz_N50000_p0_k10", "WattsStrogatz_N50000_p1_k10", "WattsStrogatz_N50000_p2_k10", "WattsStrogatz_N50000_p3_k10", "WattsStrogatz_N50000_p4_k10", "WattsStrogatz_N50000_p5_k10", "WattsStrogatz_N50000_p6_k10", "WattsStrogatz_N50000_p7_k10", "WattsStrogatz_N50000_p8_k10", "WattsStrogatz_N50000_p9_k10"};
     // for(string nw:network){
     //     for(double  r : rewiring){
@@ -899,7 +900,7 @@ int main(){
                 execution++;
                 //network->printAllEdges();
                 //network->checkDegreeDistribution();
-                cout<<"Completed for r="<<r<<" Execution = "<<execution<<"/"<<l1*l2*2<<endl;
+                cout<<"Completed for r="<<r<<" Execution = "<<execution<<"/"<<l1*l2*l3<<endl;
                 //network->printAllEdges(500);
                 delete network;
             }
