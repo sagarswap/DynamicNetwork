@@ -74,7 +74,7 @@ class Node{
     void addNeighbour(Node* newNeighbour){
         for(Node* node: neighbours){
             if(node->getId() == newNeighbour->getId()){
-                cout<<this->getId()<< " already has neighbour with ID=" <<newNeighbour->getId()<<". Ignoring duplicate addition."<<endl;
+                //cout<<this->getId()<< " already has neighbour with ID=" <<newNeighbour->getId()<<". Ignoring duplicate addition."<<endl;
                 return;
             }
         }
@@ -163,6 +163,7 @@ class DynamicNetwork{
         rewiringProbability=rewire; 
         relativeSize=0.5;
         complexContagion=contagion;
+        cout<<outputFileName<<endl;
     }
 
     void loadData(){
@@ -185,7 +186,7 @@ class DynamicNetwork{
                 if(inputNode==outputNode)
                     continue; //prevents edges into self
                 double ran=this->getRandomNumber();
-                if(ran<0.9){
+                if(ran<=0.9){
                     Node* node1=getNode(inputNode);
                     Node* node2=getNode(outputNode);
                     node1->addNeighbour(node2);
@@ -278,9 +279,9 @@ class DynamicNetwork{
             if(node->hasDiscordantEdge())
                 ideal=true;
             tries++;
-        }while(!ideal && tries<1000);
+        }while(!ideal && tries<2000);
         
-        if(tries>=1000){
+        if(tries>=2000){
             cout<<"Tries is greater with a value of "<<tries<<endl;
             return true;
         }
@@ -478,23 +479,29 @@ int main(){
     double rewiring[]={0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9};
     double start[]={0.1, 0.2, 0.3, 0.4, 0.5, 0.1, 0.2, 0.3, 0.4, 0.5};
     bool contagi[]={false, true};
+    std::string network[]={"RealWorld/facebook"};
+    //std::string network[]={"RealWorld/twitchDE", "RealWorld/twitchENGB", "RealWorld/twitchES", "RealWorld/twitchFR", "RealWorld/twitchPTBR", "RealWorld/twitchRU", "RealWorld/astroPh", "RealWorld/emailEU", "RealWorld/hepPh", "RealWorld/lastfm"};
     int l1=sizeof(rewiring)/sizeof(rewiring[0]);
     int l2=sizeof(start)/sizeof(start[0]);
     int l3=sizeof(contagi)/sizeof(contagi[0]);
+    int l4=sizeof(network)/sizeof(network[0]);
+    
     
     int execution=0;
-    for(bool c: contagi){
-        for(double  r : rewiring){
-            for(double st: start){
-                DynamicNetwork* network=new DynamicNetwork("RealWorld/facebook", 0.5, true, 0.5);
-                network->loadData();
-                network->beginSimulation();
-                execution++;
-                //network->printAllEdges();
-                //network->checkDegreeDistribution();
-                cout<<"Completed for r="<<r<<" Execution = "<<execution<<"/"<<l1*l2*l3<<endl;
-                //network->printAllEdges(500);
-                delete network;
+    for(std::string n: network){
+        for(bool c: contagi){
+            for(double  r : rewiring){
+                for(double st: start){
+                    DynamicNetwork* network=new DynamicNetwork(n, r, c, st);
+                    network->loadData();
+                    network->beginSimulation();
+                    execution++;
+                    //network->printAllEdges();
+                    //network->checkDegreeDistribution();
+                    cout<<"Completed for r="<<r<<" Execution = "<<execution<<"/"<<l1*l2*l3*l4<<endl;
+                    //network->printAllEdges(500);
+                    delete network;
+                }
             }
         }
     }
